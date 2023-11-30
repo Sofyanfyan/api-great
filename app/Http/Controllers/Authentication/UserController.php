@@ -141,6 +141,8 @@ class UserController extends Controller
 
                 $otp = VerificationCode::where('user_id', $user->id)->first();
 
+                dispatch(new SendEmailQueueJob($rules['email'], $user, $otp));
+
                 return response()->json([
                     'code' => 200,
                     'user' => auth()->guard('api')->user(),
