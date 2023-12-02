@@ -18,3 +18,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [UserController::class, 'register']);
 Route::post('/login', [UserController::class, 'login']);
+
+Route::middleware(['auth.guard'])->prefix('users')->group(function () {
+    Route::post('email-verifications', [UserController::class, 'verification']);
+});
+
+Route::middleware(['email.verified'])->prefix('users')->group(function () {
+    Route::post('dashboard', [UserController::class, 'test']);
+});

@@ -114,7 +114,7 @@ class UserController extends Controller
             if($validator->fails()) {
                 return response()->json([
                     "code" => 400,
-                    "msg" => $validator->errors(),
+                    "msg" => $validator->messages(),
                 ], 400);
             }
 
@@ -144,11 +144,11 @@ class UserController extends Controller
                 dispatch(new SendEmailQueueJob($rules['email'], $user, $otp));
 
                 return response()->json([
-                    'code' => 200,
+                    'code' => 308,
                     'user' => auth()->guard('api')->user(),
                     'otp' => $otp,
                     'token' => $token,
-                ],200);
+                ],308);
             }
 
             return response()->json([
@@ -158,6 +158,79 @@ class UserController extends Controller
             ],200);
             
 
+
+        } catch (Exception $err) {
+            // return $err;
+            return response()->json([
+                'code' => 500,
+                'msg' => 'Internal server error',
+            ], 500);
+        }
+    }
+
+
+    public function verification(Request $request){
+        
+        DB::beginTransaction();
+        
+        try {
+            //code...
+            $user = auth()->guard('api')->user();
+            $user = User::with('verification_code')->where('id', $user->id)->first();
+            
+            $rules = $request->only('otp');
+            
+            $validator = Validator::make($rules, [
+                'otp' => 'required'
+            ]);
+
+            if($validator->fails()) {
+                return response()->json([
+                    'code' => 400,
+                    'msg' => $validator->messages() 
+                ], 400);
+            }
+
+            if($user->verification_code->otp != $request->otp){
+                return response()->json([
+                    'code' => 417,
+                    'msg' => 'Code not match',
+                ], 417);
+            }
+
+            if($user->verification_code->expire_at < date('Y-m-d h:i:s')){
+                return response()->json([
+                    'code' => 408,
+                    'msg' => 'Code time out',
+                ], 408);
+            }
+
+            User::where('id', $user->id)->update([
+                'email_verified_at' => date('Y-m-d h:i:s')
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'code' => 200,
+                'msg' => 'Success verified account',
+            ], 500);
+
+        } catch (Exception $err) {
+            DB::rollBack();
+            return response()->json([
+                'code' => 500,
+                'msg' => 'Internal server error',
+            ], 500);
+        }
+    }
+
+
+    public function test(Request $request){
+        try {
+            //code...
+            return "masuk dash";
+            
 
         } catch (Exception $err) {
             return response()->json([
